@@ -6,11 +6,12 @@ from ldpred import LDpred_gibbs
 from ldpred import LDpred_inf
 from ldpred import LD_pruning_thres
 from ldpred import validate
+from ldpred import ld
 import sys
 import textwrap
 
 __version__ = '1.0.0'
- 
+
 
 parser = argparse.ArgumentParser(prog='LDpred',
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -22,13 +23,16 @@ parser = argparse.ArgumentParser(prog='LDpred',
 Typicial workflow:
     1. Use\033[1m LDpred coord\033[0m to parse summary statistics and genotypes and coordinate data.
        See LDpred coord --help for further usage description and options.
-       
-    2. Use\033[1m LDpred gibbs|inf|p+t\033[0m to obtain SNP weights for polygenic scoring using one or 
+
+    2. Use\033[1m LDpred ldfile\033[0m to obtain cached local ld files and chr level summary information..
+       See LDpred ldfile --help for further usage description and options.
+
+    3. Use\033[1m LDpred gibbs|inf|p+t\033[0m to obtain SNP weights for polygenic scoring using one or
        more methods. See LDpred gibbs|inf|p+t --help for further usage description and options.
-    
-    3. Use\033[1m LDpred score\033[0m to calculate polygenic scores using SNP weights from previous 
+
+    4. Use\033[1m LDpred score\033[0m to calculate polygenic scores using SNP weights from previous
        step. See LDpred score --help for further usage description and options.
-         
+
 2019 (c) Bjarni J Vilhjalmsson: bjarni.vilhjalmsson@gmail.com
 """))
 
@@ -38,12 +42,15 @@ parser_gibbs = subparsers.add_parser('gibbs', help='Estimate LDpred (Gibbs sampl
 parser_inf = subparsers.add_parser('inf', help='Estimate LDpred-inf SNP weights. (Requires a coordinated dataset.)')
 parser_pt = subparsers.add_parser('p+t', help='Obtain pruning+thresholding SNP weights. (Requires a coordinated dataset.)')
 parser_score = subparsers.add_parser('score', help='Calculate polygenic scores using given SNP weights.')
+# Wallace
+parser_ldfile = subparsers.add_parser('ldfile', help='Get cached local ld files and chr level summary information.')
+# -end wallace
 
 #General arguments
 parser.add_argument('--debug', default=False, action='store_true',
                     help="Activate debugging mode (more verbose)")
 
-#coord arguments 
+#coord arguments
 parser_coord.add_argument('--gf', type=str, required=True,
                     help='LD Reference Genotype File. '
                          'Should be a (full path) filename prefix to a standard PLINK bed file (without .bed). '
@@ -110,12 +117,12 @@ parser_coord.add_argument('--ncol', type=str, default="N",
 
 
 
-#gibbs arguments 
+#gibbs arguments
 parser_gibbs.add_argument('--cf', type=str, required=True,
                     help='Coordinated file (generated using ldpred coord). '
                          'Should be a (full path) filename. ')
 parser_gibbs.add_argument('--ldr', type=int, required=True,
-                    help='LD radius.  An integer number which denotes the number of SNPs on each side '  
+                    help='LD radius.  An integer number which denotes the number of SNPs on each side '
                     'of the focal SNP for which LD should be adjusted. A value corresponding M/3000, '
                     'where M is the number of SNPs in the genome is recommended')
 parser_gibbs.add_argument('--ldf', type=str, required=True,
@@ -133,20 +140,20 @@ parser_gibbs.add_argument('--n-iter', type=int, default=60,
                     help='The number of iterations used by the Gibbs sampler. The default is 60.')
 parser_gibbs.add_argument('--n-burn-in', type=int, default=5,
                     help='The number of burn-in iterations used by the Gibbs sampler. The default is 5.')
-parser_gibbs.add_argument('--h2', type=float, default=None, 
+parser_gibbs.add_argument('--h2', type=float, default=None,
                     help='The heritability assumed by LDpred.  By default it estimates the heritability from'
                     ' the GWAS summary statistics using LD score regression (Bulik-Sullivan et al., Nat Genet 2015).')
-# parser_gibbs.add_argument('--gm-ldr', type=float, default=None, 
+# parser_gibbs.add_argument('--gm-ldr', type=float, default=None,
 #                     help='If this option is set, then a genetic map will be used to calculate LD-radius. '
 #                     'A value around 1 is arguably reasonable.')
 
 
-#inf arguments 
+#inf arguments
 parser_inf.add_argument('--cf', type=str, required=True,
                     help='Coordinated file (generated using ldpred coord). '
                          'Should be a (full path) filename. ')
 parser_inf.add_argument('--ldr', type=int, required=True,
-                    help='LD radius.  An integer number which denotes the number of SNPs on each side '  
+                    help='LD radius.  An integer number which denotes the number of SNPs on each side '
                     'of the focal SNP for which LD should be adjusted. A value corresponding M/3000, '
                     'where M is the number of SNPs in the genome is recommended')
 parser_inf.add_argument('--ldf', type=str, required=True,
@@ -157,10 +164,10 @@ parser_inf.add_argument('--out', type=str, required=True,
                     help='Output Prefix for SNP weights')
 parser_inf.add_argument('--N', type=int, default=100000, required=True,
                     help='Number of individuals on which the summary statistics are assumed to be based on.')
-parser_inf.add_argument('--h2', type=float, default=None, 
+parser_inf.add_argument('--h2', type=float, default=None,
                     help='The heritability assumed by LDpred.  By default it estimates the heritability from'
                     ' the GWAS summary statistics using LD score regression (Bulik-Sullivan et al., Nat Genet 2015).')
-# parser_inf.add_argument('--gm-ldr', type=float, default=None, 
+# parser_inf.add_argument('--gm-ldr', type=float, default=None,
 #                     help='If this option is set, then a genetic map will be used to calculate LD-radius. '
 #                     'A value around 1 is arguably reasonable.')
 
@@ -169,7 +176,7 @@ parser_pt.add_argument('--cf', type=str, required=True,
                     help='Coordinated file (generated using ldpred coord). '
                          'Should be a (full path) filename. ')
 parser_pt.add_argument('--ldr', type=int, required=True,
-                    help='LD radius.  An integer number which denotes the number of SNPs on each side '  
+                    help='LD radius.  An integer number which denotes the number of SNPs on each side '
                     'of the focal SNP for which LD should be adjusted. A value corresponding M/3000, '
                     'where M is the number of SNPs in the genome is recommended')
 parser_pt.add_argument('--out', type=str, required=True,
@@ -180,9 +187,28 @@ parser_pt.add_argument('--p', default=[1,0.3,0.1,0.03,0.01,0.003,0.001,3*1E-4,
 parser_pt.add_argument('--r2', default=[0.2], nargs='+', type=float,
                     help='LD R2 thresholds. The maximum LD squared correlation allowed between any SNPs '
                     'within the given LD-radius.  Default max R2 value is set to 0.2')
-# parser_pt.add_argument('--gm-ldr', type=float, default=None, 
+# parser_pt.add_argument('--gm-ldr', type=float, default=None,
 #                     help='If this option is set, then a genetic map will be used to calculate LD-radius. '
 #                     'A value around 1 is arguably reasonable.')
+
+# Wallace
+parser_ldfile.add_argument('--cf', type=str, required=True,
+                    help='Coordinated file (generated using ldpred coord). '
+                         'Should be a (full path) filename. ')
+parser_ldfile.add_argument('--ldr', type=int, required=True,
+                    help='LD radius.  An integer number which denotes the number of SNPs on each side '
+                    'of the focal SNP for which LD should be adjusted. A value corresponding M/3000, '
+                    'where M is the number of SNPs in the genome is recommended')
+parser_ldfile.add_argument('--ldf', type=str, required=True,
+                    help='LD file (prefix). A path and filename prefix for the LD file.')
+# parser_ldfile.add_argument('--out', type=str, required=True,
+#                     help='Output Prefix for SNP weights')
+parser_ldfile.add_argument('--N', type=int, default=100000, required=True,
+                    help='Number of individuals on which the summary statistics are assumed to be based on.')
+parser_ldfile.add_argument('--h2', type=float, default=None,
+                    help='The heritability assumed by LDpred.  By default it estimates the heritability from'
+                    ' the GWAS summary statistics using LD score regression (Bulik-Sullivan et al., Nat Genet 2015).')
+#- end Wallace.
 
 
 parser_score.add_argument('--gf', type=str, default=None,
@@ -226,7 +252,7 @@ def main():
     if p_dict['debug']:
         print ('Parsed parameters:')
         print(p_dict)
-    
+
     action = p_dict['ldpred_action']
     if action=='coord':
         coord_genotypes.main(p_dict)
@@ -238,10 +264,13 @@ def main():
         LD_pruning_thres.main(p_dict)
     elif action=='score':
         validate.main(p_dict)
+    elif action=='ldfile':
+        ld.get_ld_dict(p_dict['cf'], p_dict['ldf'], p_dict['ldr'],wallaceld=True)
+
     elif action=='all':
         pass
-    
-    
-    
+
+
+
 if __name__ == '__main__':
     main()

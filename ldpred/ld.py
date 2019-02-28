@@ -9,6 +9,7 @@ import time
 import h5py
 from numpy import linalg
 from ldpred import util
+import glob
 
 
 
@@ -187,11 +188,16 @@ def smart_ld_pruning(scores, ld_table, max_ld=0.5, verbose=False, reverse=False)
     return pruning_vector
 
 
-def get_ld_dict(cord_data_file, local_ld_file_prefix, ld_radius, gm_ld_radius=None):
+def get_ld_dict(cord_data_file, local_ld_file_prefix, ld_radius, gm_ld_radius=None, wallaceld=False):
+#def get_ld_dict(cord_data_file, local_ld_file_prefix, ld_radius, gm_ld_radius=None):
     """
     Returns the LD dictionary.  Creates a new LD file, if the file doesn't already exist.
     """
     local_ld_dict_file = '%s_ldradius%d.pickled.gz'%(local_ld_file_prefix, ld_radius)
+    if wallaceld==False:
+        if not os.path.isfile(local_ld_dict_file):
+            sys.stderr.write('ERROR: Please "LDpred ldfile" to generate local ld file first.')
+            sys.exit(-1)
 
     if not os.path.isfile(local_ld_dict_file):
         chrom_ld_scores_dict = {}
@@ -244,7 +250,14 @@ def get_ld_dict(cord_data_file, local_ld_file_prefix, ld_radius, gm_ld_radius=No
             ld_score_sum += sp.sum(ld_scores)
             num_snps += n_snps
 
+            # - Wallace start
             # need modify here for save chr by chr summary.
+            # WRITE OUT CHROMOSOME LEVEL data.
+            betas = g['betas'][...][ok_snps_filter]
+            if wallaceld==True:
+                with open(local_ld_dict_file + '_byFileCache' +'.txt','w') as f:
+                    f.write(chrom_str +': ld_scores\t%f\tn_snps\t%d\ttotal_beta_square\t%f\tn_betas\t%d\n'%(sp.sum(ld_scores),n_snps,sp.sum(betas ** 2),n_snps))
+            # - Wallace end.
 
         avg_gw_ld_score = ld_score_sum / float(num_snps)
         ld_scores_dict = {'avg_gw_ld_score': avg_gw_ld_score, 'chrom_dict':chrom_ld_scores_dict}
@@ -285,6 +298,82 @@ def get_chromosome_herits(cord_data_g, ld_scores_dict, n, max_h2=1, h2=None):
 
     L = ld_scores_dict['avg_gw_ld_score']
     chi_square_lambda = sp.mean(n * sum_beta2s / float(num_snps))
+    print('Genome-wide lambda inflation: %0.4f'% chi_square_lambda)
+    print('Genome-wide mean LD score: %0.4f'% L)
+    gw_h2_ld_score_est = max(0.0001, (max(1, chi_square_lambda) - 1) / (n * (L / num_snps)))
+    print('LD-score estimated genome-wide heritability: %0.4f'% gw_h2_ld_score_est)
+    assert chi_square_lambda>1, 'Something is wrong with the GWAS summary statistics, parsing of them, or the given GWAS sample size (N). Lambda (the mean Chi-square statistic) is too small.  '
+
+    #Only use LD score heritability if it is not given as argument.
+    if h2==None:
+        if gw_h2_ld_score_est>1:
+            print ('LD-score estimated heritability is suspiciously large, suggesting that the given sample size is wrong, or that SNPs are enriched for heritability (e.g. using p-value thresholding). If the SNPs are enriched for heritability we suggest using the --h2 flag to provide a more reasonable heritability estimate.')
+        h2 = min(gw_h2_ld_score_est,max_h2)
+    print('Heritability used for inference: %0.4f'%h2)
+
+    #Distributing heritabilities among chromosomes.
+    for k in herit_dict:
+        herit_dict[k] = h2 * herit_dict[k]/float(num_snps)
+
+    herit_dict['gw_h2_ld_score_est'] = gw_h2_ld_score_est
+    return herit_dict
+
+def get_chromosome_herits_wallace(cord_data_g, ld_scores_dict, n, max_h2=1, h2=None, local_ld_dict_file=None):
+    """
+    Calculating genome-wide heritability using LD score regression, and partition heritability by chromosome
+    """
+    num_snps = 0        # Need load this from file from coord step.
+    sum_beta2s = 0      # Need load this from file from coord step.
+    herit_dict = {}
+    for chrom_str in util.chromosomes_list:
+        if chrom_str in cord_data_g:
+            g = cord_data_g[chrom_str]
+            betas = g['betas'][...]
+            n_snps = len(betas)
+            num_snps += n_snps
+            sum_beta2s += sp.sum(betas ** 2)
+            herit_dict[chrom_str] = n_snps
+
+    # - Wallace's version.
+    # load chr specific summary from cached files.
+    # load and calculate genome wide avg_gw_ld_score and chi_square_lambda
+    # input files, load all the files in ld_file folder end by _byFileCache.txt
+    # print local_ld_dict_file
+    loadname = os.path.dirname(os.path.realpath(local_ld_dict_file)) + '/*_byFileCache.txt'
+    print('WALLACE INFO: load chromosome level summary file pattern: ' + loadname)
+    wallace_chr_summary = []
+    print('WALLACE INFO: *** please make sure all files have been loaded!****')
+    ldfiles = []
+    for f in glob.glob(loadname):
+        # print 'WALLACE INFO: load chromosome level summary file: ' + f
+        ldfiles.append(str(f))
+        with open(f,'r') as rf:
+            wallace_chr_summary.append(rf.readline().strip().split())
+
+    for temp_n in sorted(ldfiles):
+         print('WALLACE INFO: load chromosome level summary file: ' + temp_n)
+    print('WALLACE INFO: totally loaded chr: %d'%(len(wallace_chr_summary)))
+
+    Total_LD_scores = sum([float(x[2]) for x in wallace_chr_summary])
+    Total_SNPS      = sum([int(x[4])   for x in wallace_chr_summary])
+    Total_betas     = sum([float(x[6]) for x in wallace_chr_summary])
+    # do not set n_snps here, this need to be set chr by chr.confirmed bug by DLpred author.
+    # n_snps          = min([int(x[4])   for x in wallace_chr_summary]) # the length for chr22.
+    # reset from the loading from cache file.
+    num_snps        = Total_SNPS
+    sum_beta2s      = Total_betas
+
+    L = Total_LD_scores / Total_SNPS
+    chi_square_lambda = sp.mean(n * sum_beta2s / float(num_snps))
+
+    print('%d SNP effects were found' % num_snps)
+
+    # the avg_gw_ld_score was calculated by:
+    # avg_gw_ld_score = ld_score_sum / float(num_snps)
+    # So we do it here for each chr.
+    # OLD: L = ld_scores_dict['avg_gw_ld_score']
+    # OLD: chi_square_lambda = sp.mean(n * sum_beta2s / float(num_snps))
+
     print('Genome-wide lambda inflation: %0.4f'% chi_square_lambda)
     print('Genome-wide mean LD score: %0.4f'% L)
     gw_h2_ld_score_est = max(0.0001, (max(1, chi_square_lambda) - 1) / (n * (L / num_snps)))

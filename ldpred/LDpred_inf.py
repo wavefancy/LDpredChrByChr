@@ -6,13 +6,13 @@ from scipy import linalg
 from ldpred import util
 from ldpred import ld
 
-def ldpred_inf(beta_hats, h2=0.1, n=1000, inf_shrink_matrices=None, 
+def ldpred_inf(beta_hats, h2=0.1, n=1000, inf_shrink_matrices=None,
                reference_ld_mats=None, genotypes=None, ld_window_size=100, verbose=False):
     """
     Apply the infinitesimal shrink w LD (which requires LD information).
-    
+
     If reference_ld_mats are supplied, it uses those, otherwise it uses the LD in the genotype data.
-    
+
     If genotypes are supplied, then it assumes that beta_hats and the genotypes are synchronized.
 
     """
@@ -54,12 +54,14 @@ def ldpred_inf(beta_hats, h2=0.1, n=1000, inf_shrink_matrices=None,
     return updated_betas
 
 
+# def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_file_prefix=None,
+#                           n=None, h2=None, verbose=False):
 def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_file_prefix=None,
-                          n=None, h2=None, verbose=False):
+                          n=None, h2=None, verbose=False, local_ld_file_prefix=None):
     """
     Calculate LDpred for a genome
-    """    
-    
+    """
+
     df = h5py.File(data_file,'r')
     has_phenotypes=False
     if 'y' in df:
@@ -71,13 +73,17 @@ def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_fi
 
     ld_scores_dict = ld_dict['ld_scores_dict']
     chrom_ref_ld_mats = ld_dict['chrom_ref_ld_mats']
-        
+
     print('Applying LDpred-inf with LD radius: %d' % ld_radius)
     results_dict = {}
     cord_data_g = df['cord_data']
 
     #Calculating genome-wide heritability using LD score regression, and partition heritability by chromsomes
-    herit_dict = ld.get_chromosome_herits(cord_data_g, ld_scores_dict, n, h2=h2)
+    # herit_dict = ld.get_chromosome_herits(cord_data_g, ld_scores_dict, n, h2=h2)
+    # -start wallace
+    local_ld_dict_file = '%s_ldradius%d.pickled.gz'%(local_ld_file_prefix, ld_radius)
+    herit_dict = ld.get_chromosome_herits_wallace(cord_data_g, ld_scores_dict, n, h2=h2, local_ld_dict_file=local_ld_dict_file)
+    # -end wallace
 
     if out_file_prefix:
         #Preparing output files
@@ -87,7 +93,7 @@ def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_fi
         chromosomes = []
         positions = []
         nts = []
-        
+
     for chrom_str in util.chromosomes_list:
         if chrom_str in cord_data_g:
             g = cord_data_g[chrom_str]
@@ -96,7 +102,7 @@ def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_fi
                     raw_snps = g['raw_snps_val'][...]
                 else:
                     raw_snps = g['raw_snps_ref'][...]
-            
+
             snp_stds = g['snp_stds_ref'][...]
             pval_derived_betas = g['betas'][...]
             if out_file_prefix:
@@ -107,11 +113,12 @@ def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_fi
                 raw_effect_sizes.extend(g['log_odds'][...])
                 nts_arr = (g['nts'][...]).astype(util.nts_u_dtype)
                 nts.extend(nts_arr)
-        
-            h2_chrom = herit_dict[chrom_str] 
-            updated_betas = ldpred_inf(pval_derived_betas, genotypes=None, reference_ld_mats=chrom_ref_ld_mats[chrom_str], 
+
+            # print(herit_dict)
+            h2_chrom = herit_dict[chrom_str]
+            updated_betas = ldpred_inf(pval_derived_betas, genotypes=None, reference_ld_mats=chrom_ref_ld_mats[chrom_str],
                                                 h2=h2_chrom, n=n, ld_window_size=2*ld_radius, verbose=False)
-                    
+
             print('Calculating scores for Chromosome %s'%((chrom_str.split('_'))[1]))
             updated_betas = updated_betas / (snp_stds.flatten())
             ldpred_effect_sizes.extend(updated_betas)
@@ -122,7 +129,7 @@ def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_fi
                 r2 = corr ** 2
                 print('The R2 prediction accuracy of PRS using %s was: %0.4f' %(chrom_str, r2))
 
-                
+
     if has_phenotypes:
         num_indivs = len(y)
         results_dict['y']=y
@@ -139,14 +146,14 @@ def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_fi
         auc = util.calc_auc(y,risk_scores_pval_derived)
         print('AUC for the whole genome was: %0.4f'%auc)
 
-        #Now calibration                               
+        #Now calibration
         denominator = sp.dot(risk_scores_pval_derived.T, risk_scores_pval_derived)
         y_norm = (y-sp.mean(y))/sp.std(y)
         numerator = sp.dot(risk_scores_pval_derived.T, y_norm)
         regression_slope = (numerator / denominator)
         print('The slope for predictions with P-value derived  effects is: %0.4f'%regression_slope)
         results_dict['slope_pd']=regression_slope
-    
+
     weights_out_file = '%s.txt'%(out_file_prefix)
     with open(weights_out_file,'w') as f:
         f.write('chrom    pos    sid    nt1    nt2    raw_beta    ldpred_inf_beta\n')
@@ -158,9 +165,8 @@ def ldpred_inf_genomewide(data_file=None, ld_radius = None, ld_dict=None, out_fi
 
 def main(p_dict):
     ld_dict = ld.get_ld_dict(p_dict['cf'], p_dict['ldf'], p_dict['ldr'])
-    
-    ldpred_inf_genomewide(data_file=p_dict['cf'], out_file_prefix=p_dict['out'], ld_radius=p_dict['ldr'], 
-                          ld_dict = ld_dict, n=p_dict['N'], h2=p_dict['h2'], verbose=p_dict['debug'])
-            
-                    
 
+    # ldpred_inf_genomewide(data_file=p_dict['cf'], out_file_prefix=p_dict['out'], ld_radius=p_dict['ldr'],
+    #                       ld_dict = ld_dict, n=p_dict['N'], h2=p_dict['h2'], verbose=p_dict['debug'])
+    ldpred_inf_genomewide(data_file=p_dict['cf'], out_file_prefix=p_dict['out'], ld_radius=p_dict['ldr'],
+                          ld_dict = ld_dict, n=p_dict['N'], h2=p_dict['h2'], verbose=p_dict['debug'], local_ld_file_prefix=p_dict['ldf'])

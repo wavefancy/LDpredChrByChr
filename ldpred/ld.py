@@ -5,6 +5,12 @@ Various useful LD functions.
 """
 import scipy as sp
 import sys, os, gzip, pickle
+# Wallace change pickle to cPickle.
+# import sys, os, gzip
+# import _pickle as pickle
+# https://github.com/telegraphic/hickle
+import hickle as hkl
+
 import time
 import h5py
 from numpy import linalg
@@ -266,15 +272,22 @@ def get_ld_dict(cord_data_file, local_ld_file_prefix, ld_radius, gm_ld_radius=No
         ld_dict = {'ld_scores_dict':ld_scores_dict, 'chrom_ld_dict':chrom_ld_dict, 'chrom_ref_ld_mats':chrom_ref_ld_mats}
         if gm_ld_radius is not None:
             ld_dict['chrom_ld_boundaries'] = chrom_ld_boundaries
-        f = gzip.open(local_ld_dict_file, 'wb')
-        pickle.dump(ld_dict, f, protocol=2)
-        f.close()
+        # f = gzip.open(local_ld_dict_file, 'wb')
+        # #pickle.dump(ld_dict, f, protocol=2)
+        # # Wallace: use the latest pickle protocol version.
+        # pickle.dump(ld_dict, f, protocol=-1)
+        # f.close()
+
+        #try hkl
+        hkl.dump(ld_dict, local_ld_dict_file, mode='w', compression='gzip')
+
         print('LD information is now pickled.')
     else:
         print('Loading LD information from file: %s' % local_ld_dict_file)
-        f = gzip.open(local_ld_dict_file, 'r')
-        ld_dict = pickle.load(f)
-        f.close()
+        # f = gzip.open(local_ld_dict_file, 'r')
+        # ld_dict = pickle.load(f)
+        # f.close()
+        ld_dict = hkl.load(local_ld_dict_file)
     return ld_dict
 
 

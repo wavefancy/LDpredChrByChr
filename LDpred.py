@@ -203,8 +203,9 @@ parser_ldfile.add_argument('--ldf', type=str, required=True,
                     help='LD file (prefix). A path and filename prefix for the LD file.')
 # parser_ldfile.add_argument('--out', type=str, required=True,
 #                     help='Output Prefix for SNP weights')
-parser_ldfile.add_argument('--N', type=int, default=100000, required=True,
-                    help='Number of individuals on which the summary statistics are assumed to be based on.')
+# - Wallace: it's not necessary for N in this step.
+# parser_ldfile.add_argument('--N', type=int, default=100000, required=True,
+#                     help='Number of individuals on which the summary statistics are assumed to be based on.')
 parser_ldfile.add_argument('--h2', type=float, default=None,
                     help='The heritability assumed by LDpred.  By default it estimates the heritability from'
                     ' the GWAS summary statistics using LD score regression (Bulik-Sullivan et al., Nat Genet 2015).')

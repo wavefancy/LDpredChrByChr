@@ -345,8 +345,8 @@ def parse_sum_stats_giant(filename=None,
     """
     Input format:
 
-    MarkerName      Allele1 Allele2 Freq.Allele1.HapMapCEU  b       SE      p       N
-    MarkerName Allele1 Allele2 Freq.Allele1.HapMapCEU p N
+    MarkerName      Allele1 Allele2 Freq.Allele1  Beta       SE      p       N
+    MarkerName Allele1 Allele2 Freq.Allele1 p N
     rs10 a c 0.0333 0.8826 78380
     rs1000000 a g 0.3667 0.1858 133822
 
@@ -359,11 +359,11 @@ def parse_sum_stats_giant(filename=None,
                     pos=None,
                     A1='Allele1',
                     A2='Allele2',
-                    reffreq='Freq.Allele1.HapMapCEU',
+                    reffreq='Freq.Allele1',
                     info=None,
                     rs='MarkerName',
                     pval='p',
-                    eff='b',
+                    eff='Beta',
                     ncol='N',
                     input_is_beta=True,
                     debug=debug)

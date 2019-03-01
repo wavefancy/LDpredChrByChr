@@ -2,6 +2,8 @@
 
 =======================
 
+### **** Optimized LDpred version for memory efficiency and parallel in chr and chr ****
+
 *This is an ad hoc modification of the source code of the original LDpred code to make it can be run in parallel chr by chr. Full credit and copyright should be granted to the LDpred author. If there's violation of the copyright of LDpred, please let me know, I will delete all these codes and tutorials.*
 
 ```
@@ -24,7 +26,7 @@ Please just download this git repository to the any folder you want. For example
 
 This version depends on ```plinkio``` and ```hickle```. Please install by ```pip install hickle plinkio docopt```. I also recommend use [conda](https://conda.io/en/latest/).
 
-__This repo is base on the Feb272019 version of LDpred, with proper bug fix.___
+__This repo is base on the Feb272019 version of LDpred, with proper bug fix.__
 
 - This version run in chr by chr mode, and thanks to [hickle](https://github.com/telegraphic/hickle) which greatly reduced the amount of memory needed.
 - Parallel in chr, saved your waiting time.

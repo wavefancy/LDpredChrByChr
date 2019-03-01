@@ -2,7 +2,8 @@
 
 =======================
 
-### **** Optimized LDpred version for memory efficiency and parallel in chr and chr ****
+### **** Optimized LDpred version for memory efficiency and parallel in chr by chr ****
+
 
 *This is an ad hoc modification of the source code of the original LDpred code to make it can be run in parallel chr by chr. Full credit and copyright should be granted to the LDpred author. If there's violation of the copyright of LDpred, please let me know, I will delete all these codes and tutorials.*
 
@@ -43,7 +44,6 @@ The LD reference panel is in plink bed/fam/bim format, the input summary statist
 # You can use bash for-loop to replace my style here.
 
 parallel -j 1 -q wecho "
-    #source activate Python27 &&
     rm -f data/coord.file.chr{}
     &&
     /medpop/esp2/wallace/tools/LDpred/1.0_wallace/LDpred.py --debug coord
@@ -53,7 +53,7 @@ parallel -j 1 -q wecho "
         --ssf-format=CUSTOM
         --out data/coord.file.chr{}
         --rs MarkerName --A1 Allele1 --A2 Allele2 --pos pos --chr hg19chrc --pval p --eff Beta --ncol N
-        # reffreq is also the A1 freq based on the sum_stats_parsers.py file.
+        # reffreq is also the A1 freq.
         --reffreq Freq.Allele1
         --beta
     &>log/1-3.chr{}.log

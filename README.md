@@ -31,6 +31,7 @@ __This repo is base on the Feb272019 version of LDpred, with proper bug fix.__
 
 - This version run in chr by chr mode, and thanks to [hickle](https://github.com/telegraphic/hickle) which greatly reduced the amount of memory needed.
 - Parallel in chr, saved your waiting time.
+- Fix the bug for loading GWAS summary if there are snps with extreme pvalues (0 or 1).
 
 
 ### Start run LDpred chr by chr
@@ -75,75 +76,47 @@ chr20     61795  20:61795    T        G        0.3387        -0.0030965362  0.00
 
 #### 2) Generate the LD structure file and summary for estimating of heritability and inflation factor.
 ```
-pp -j 1 -q wecho "
-    LDpred.getLocalLDFile.CHR.Wallace.V1.py
-        # coord file, from step 1.
-        --coord data/coord.file.chr{}
-        # sample size for summary statistics.
-        --N=$nsamples
-        # about total_num_of_snp(genome widely)/3000, corresponding 1m on each side of the focal snp.
-        # please refer to LDpred instruction.
-        --ld_radius=$lr
-        # generated LD structure file.
-        # An extra file of data/ld_file_chr{}.gz_byFileCache.txt will also be genrated,
-        # which store the chr-specific parameter for heritability and inflation factor estimation.
-        --local_ld_file=data/ld_file_chr{}.gz
-    &>log/1-4.chr{}.log
-" :::: chr.sh
+ parallel -j 1 -q wecho "
+ rm -f data/ld_file_chr{}.gz*
+ &&
+      /medpop/esp2/wallace/tools/LDpred/1.0_wallace/LDpred.py ldfile
+         # coord file
+         --cf data/coord.file.chr{}
+         # num_of_snp/3000, corresponding 1m on each side of the focal snp.
+         --ldr 700
+         --ldf data/ld_file_chr{}.gz
+     &>log/1-4.chr{}.log
+ " :::: chr.sh
 ```
 
 #### 3) Wait all chr done in step 2. Reweigh the beta value by LDpred.
 
 ```
-pp -j 1 -q wecho "
-    # Here we used numpy version for SVD.
-    # If you get error as "SVD did not converge in Linear Least Squares".
-    # Try the scipy version.
-    # This step sometimes is not stable for my version of python.
-
-    LDpred.ScaleEffectSize.CHR.Numpy.Wallace.V1.py
-        # coord file from step1.
-        --coord data/coord.file.chr{}
+parallel -j 1 -q wecho "
+    /medpop/esp2/wallace/tools/LDpred/1.0_wallace/LDpred.py
+        gibbs
+        --cf data/coord.file.chr{1}
         # sample size for summary statistics.
-        --N=$nsamples
+        --N 235705
         # num_of_snp/3000, corresponding 1m on each side of the focal snp.
-        --ld_radius=$lr
-        # LD structure from step2.
-        --local_ld_file=data/ld_file_chr{}.gz
-        # output reweighed beta.
-        --out=data/numpy.effect.ldpred.chr{}
-    &>log/1-5.chr{}.log
-    &&
-        gzip data/numpy.effect.ldpred.chr{}_LDpred*
+        --ldr 700
+        --ldf data/ld_file_chr{1}.gz
+        --out data/BMI2.ldpred.radius700.chr{1}-gibbs
+        &>log/1-5.chr{1}-gibbs.log
+
+        &&
+        gzip -f data/BMI2.ldpred.radius700.chr{1}-gibbs*
 " :::: chr.sh
 ```
-In this step, SVD sometimes is not stable, I usually use Numpy, if failed try scipy again.
 __It's the user's responsibility to make sure all the cached files for the heritability and inflation factor estimation are fully loaded, please check the log information from the last step to confirm it.__ You will find some thing like below.
 ```
-WALLACE INFO: load chromosome level summary file pattern: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/*_byFileCache.txt
-WALLACE INFO: *** please make sure all files have been loaded!****
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr1.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr10.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr11.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr12.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr13.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr14.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr15.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr16.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr17.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr18.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr19.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr2.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr20.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr21.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr22.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr3.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr4.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr5.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr6.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr7.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr8.gz_byFileCache.txt
-WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/CAD_1KG/data/ld_file_chr9.gz_byFileCache.txt
+WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/BMI_Mark/LDpred_CHR_V1.0_Feb272019_HKL/data/ld_file_chr1.gz_ldradius700.pickled.gz_byFileCache.txt
+WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/BMI_Mark/LDpred_CHR_V1.0_Feb272019_HKL/data/ld_file_chr2.gz_ldradius700.pickled.gz_byFileCache.txt
+WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/BMI_Mark/LDpred_CHR_V1.0_Feb272019_HKL/data/ld_file_chr3.gz_ldradius700.pickled.gz_byFileCache.txt
+.......
+WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/BMI_Mark/LDpred_CHR_V1.0_Feb272019_HKL/data/ld_file_chr20.gz_ldradius700.pickled.gz_byFileCache.txt
+WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/BMI_Mark/LDpred_CHR_V1.0_Feb272019_HKL/data/ld_file_chr21.gz_ldradius700.pickled.gz_byFileCache.txt
+WALLACE INFO: load chromosome level summary file: /medpop/esp2/wallace/projects/Amit/PRS/BMI_Mark/LDpred_CHR_V1.0_Feb272019_HKL/data/ld_file_chr22.gz_ldradius700.pickled.gz_byFileCache.txt
 WALLACE INFO: totally loaded chr: 22
 ```
 
@@ -154,7 +127,7 @@ WALLACE INFO: totally loaded chr: 22
 # --score my.scores 3 2 1 [id,allele,score]
 # reads variant IDs from column 3, allele codes from column 2, and scores from column 1.
 source config.sh
-pp -j 1 -q wecho "
+parallel -j 1 -q wecho "
     plink
         --bfile data/all.chr
         --allow-no-sex
@@ -177,6 +150,6 @@ LDpred_p3.0000e-03
 ```
 
 ### Bechmark of this pipeline with LDpred's load as a whole approach.
-Please check the chr1.png and all.LDpred_p1.0000e+00.png, the results are identical.
+Please check the chr1.png and images/all.LDpred_p1.0000e+00.png, the results are identical.
 
-![Results for chr1](chr1.png)
+![Results for chr1](images/chr1.png)

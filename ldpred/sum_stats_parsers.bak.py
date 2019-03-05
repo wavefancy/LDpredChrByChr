@@ -4,7 +4,6 @@ from scipy import isinf
 import re
 import gzip
 from ldpred import util
-import sys
 
 
 sids_dtype = "S30" #30 character limit
@@ -163,16 +162,6 @@ def parse_sum_stats_custom(filename=None,
                 if not chrom in chrom_dict:
                     chrom_dict[chrom] = {'ps':[], 'log_odds':[], 'infos':[], 'freqs':[],
                              'betas':[], 'nts': [], 'sids': [], 'positions': []}
-
-                # - Start Wallace, fix the bug.
-                # validate the p values first, if has problem, complete ignore this snp.
-                pval_read = float(l[header_dict[pval]])
-                if isinf(stats.norm.ppf(pval_read)):
-                    invalid_p += 1
-                    continue
-                chrom_dict[chrom]['ps'].append(pval_read)
-                # - end Wallace.
-
                 chrom_dict[chrom]['sids'].append(sid)
                 chrom_dict[chrom]['positions'].append(pos_read)
                 # Check the frequency
@@ -205,18 +194,14 @@ def parse_sum_stats_custom(filename=None,
                 if info is not None and info in header_dict:
                     info_sc = float(l[header_dict[info]])
                 chrom_dict[chrom]['infos'].append(info_sc)
-                # - Wallace, move this to the very beginning for checking.
-                # Please refer to line 167 to 174.
-                # pval_read = float(l[header_dict[pval]])
-                # chrom_dict[chrom]['ps'].append(pval_read)
-                # if isinf(stats.norm.ppf(pval_read)):
-                #     invalid_p += 1
-                #     continue
-                # - end fix.
+                pval_read = float(l[header_dict[pval]])
+                chrom_dict[chrom]['ps'].append(pval_read)
+                if isinf(stats.norm.ppf(pval_read)):
+                    invalid_p += 1
+                    continue
 
                 nt = [l[header_dict[A1]].upper(), l[header_dict[A2]].upper()]
                 chrom_dict[chrom]['nts'].append(nt)
-
                 raw_beta = float(l[header_dict[eff]])
                 if not input_is_beta:
                     raw_beta = sp.log(raw_beta)
@@ -246,12 +231,6 @@ def parse_sum_stats_custom(filename=None,
     num_snps = 0
     num_non_finite = 0
     for chrom in chrom_dict:
-        # Wallace for checking allele coding.
-        if debug:
-            for x,y,z in zip(chrom_dict[chrom]['sids'],chrom_dict[chrom]['nts'], chrom_dict[chrom]['ps']):
-                sys.stderr.write('AFTER LOAD GWAS SUM: %s %s %s %s\n'%(x,y[0],y[1],z))
-        # end - Wallace
-
         if debug:
             print ('%d SNPs on chromosome %s' % (len(chrom_dict[chrom]['positions']), chrom))
         sl = list(zip(chrom_dict[chrom]['positions'], chrom_dict[chrom]['sids'], chrom_dict[chrom]['nts'],

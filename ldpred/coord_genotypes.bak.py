@@ -4,7 +4,6 @@ import os
 import scipy as sp
 import gzip
 import h5py
-import sys
 from ldpred import sum_stats_parsers
 from ldpred import util
 from ldpred import plinkfiles
@@ -31,7 +30,7 @@ def _verify_coord_data_(data_dict):
         assert num_snps ==len(data_dict['snp_stds_val']), 'Inconsistencies in coordinated data sizes'
         assert num_snps ==len(data_dict['snp_means_val']), 'Inconsistencies in coordinated data sizes'
         assert num_snps ==len(data_dict['freqs_val']), 'Inconsistencies in coordinated data sizes'
-
+    
 
 
 def write_coord_data(cord_data_g, coord_dict):
@@ -47,7 +46,7 @@ def write_coord_data(cord_data_g, coord_dict):
         ofg.create_dataset('snp_stds_val', data=coord_dict['snp_stds_val'])
         ofg.create_dataset('snp_means_val', data=coord_dict['snp_means_val'])
         ofg.create_dataset('freqs_val', data=coord_dict['freqs_val'])
-
+    
     ofg.create_dataset('ps', data=coord_dict['ps'])
     ofg.create_dataset('positions', data=coord_dict['positions'])
     ofg.create_dataset('nts', data=sp.array(coord_dict['nts'],dtype=util.nts_dtype))
@@ -105,7 +104,6 @@ def coordinate_genot_ss(genotype_file=None,
         print('Coordinating data for chromosome %s' % chr_str)
 
         chrom_d = chr_dict[chr_str]
-        #print(chrom_d)
         try:
             ssg = ssf['chrom_%d' % chrom]
         except Exception as err_str:
@@ -113,12 +111,6 @@ def coordinate_genot_ss(genotype_file=None,
             print('Did not find chromosome in SS dataset.')
             print('Continuing.')
             continue
-
-        # for x,y in zip(chrom_d['sids'], chrom_d['nts']):
-        #     sys.stderr.write(f'{x} {y[0]} {y[1]}\n')
-        #
-        # for x,y in zip(ssg['sids'], ssg['nts']):
-        #     sys.stderr.write(f'{x} {y[0]} {y[1]}\n')
 
         g_sids = chrom_d['sids']
         g_sid_set = set(g_sids)
@@ -153,10 +145,6 @@ def coordinate_genot_ss(genotype_file=None,
         assert not sp.any(sp.isnan(betas)), 'Some SNP effect estimates are NANs (not a number)'
         assert not sp.any(sp.isinf(betas)), 'Some SNP effect estimates are INFs (infinite numbers)'
 
-        # Wallace -start, fuck LDpred
-        w_pos = chrom_d['positions']
-        # -end
-
         num_non_matching_nts = 0
         num_ambig_nts = 0
         ok_nts = []
@@ -168,7 +156,6 @@ def coordinate_genot_ss(genotype_file=None,
 
         ok_indices = {'g': [], 'ss': []}
         for g_i, ss_i in zip(g_indices, ss_indices):
-        # for g_i, ss_i, pos_i in zip(g_indices, ss_indices, w_pos):
 
             # Is the nucleotide ambiguous?
             g_nt = [g_nts[g_i][0], g_nts[g_i][1]]
@@ -194,7 +181,6 @@ def coordinate_genot_ss(genotype_file=None,
                     # Opposite strand nucleotides
                     flip_nts = (g_nt[1] == ss_nt[0] and g_nt[0] == ss_nt[1]) or (
                         os_g_nt[1] == ss_nt[0] and os_g_nt[0] == ss_nt[1])
-
                     if flip_nts:
                         betas[ss_i] = -betas[ss_i]
                         log_odds[ss_i] = -log_odds[ss_i]
@@ -202,11 +188,6 @@ def coordinate_genot_ss(genotype_file=None,
                             if ss_freqs[ss_i] > 0:
                                 ss_freqs[ss_i] = 1 - ss_freqs[ss_i]
                     else:
-                        # Wallace debug
-                        if debug:
-                            sys.stderr.write(f'non match at: {g_sids[g_i]} - ssid:{ss_sids[ss_i]}, g_nt: {g_nt[0]} - {g_nt[1]}, ss_nt: {ss_nt[0]} - {ss_nt[1]}\n')
-                        # End Wallace debug.
-                        
                         num_non_matching_nts += 1
                         tot_num_non_matching_nts += 1
 
@@ -230,7 +211,7 @@ def coordinate_genot_ss(genotype_file=None,
 
         # Parse SNPs
         snp_indices = sp.array(chrom_d['snp_indices'])
-
+        
         # Pinpoint where the SNPs are in the file.
         snp_indices = snp_indices[ok_indices['g']]
         raw_snps, freqs = plinkfiles.parse_plink_snps(
@@ -238,8 +219,8 @@ def coordinate_genot_ss(genotype_file=None,
         if debug:
             print('Parsed a %dX%d (SNP) genotype matrix'%(raw_snps.shape[0],raw_snps.shape[1]))
 
-        snp_stds = sp.sqrt(2 * freqs * (1 - freqs))
-        snp_means = freqs * 2
+        snp_stds = sp.sqrt(2 * freqs * (1 - freqs))  
+        snp_means = freqs * 2  
 
         betas = betas[ok_indices['ss']]
         log_odds = log_odds[ok_indices['ss']]
@@ -323,10 +304,10 @@ def coordinate_genot_ss(genotype_file=None,
         else:
             genetic_map = None
 
-        coord_data_dict = {'chrom': 'chrom_%d' % chrom,
-                           'raw_snps_ref': raw_snps,
-                           'snp_stds_ref': snp_stds,
-                           'snp_means_ref': snp_means,
+        coord_data_dict = {'chrom': 'chrom_%d' % chrom, 
+                           'raw_snps_ref': raw_snps, 
+                           'snp_stds_ref': snp_stds, 
+                           'snp_means_ref': snp_means, 
                            'freqs_ref': freqs,
                            'ps': ps,
                            'positions': positions,
@@ -336,16 +317,16 @@ def coordinate_genot_ss(genotype_file=None,
                            'betas': betas,
                            'log_odds': log_odds,
                            'log_odds_prs': rb_prs}
-
+        
         write_coord_data(cord_data_g, coord_data_dict)
-
+        
         if debug and plinkf_dict['has_phenotype']:
             rb_risk_scores += rb_prs
             risk_scores += prs
         num_common_snps += len(betas)
 
     if debug and plinkf_dict['has_phenotype']:
-
+        
         # Now calculate the prediction R^2
         corr = sp.corrcoef(plinkf_dict['phenotypes'], risk_scores)[0, 1]
         rb_corr = sp.corrcoef(plinkf_dict['phenotypes'], rb_risk_scores)[0, 1]
@@ -364,14 +345,14 @@ def coordinate_genotypes_ss_w_ld_ref(genotype_file=None,
                                      genetic_map_dir=None,
                                      check_mafs=False,
                                      min_maf=0.01,
-                                     skip_coordination=False,
+                                     skip_coordination=False, 
                                      debug=False):
     print('Coordinating things w genotype file: %s \nref. genot. file: %s' % (genotype_file, reference_genotype_file))
-
+    
     from plinkio import plinkfile
     plinkf = plinkfile.PlinkFile(genotype_file)
 
-    # Loads only the individuals...
+    # Loads only the individuals... 
     plinkf_dict = plinkfiles.get_phenotypes(plinkf)
 
     # Figure out chromosomes and positions.
@@ -587,11 +568,11 @@ def coordinate_genotypes_ss_w_ld_ref(genotype_file=None,
         snp_stds = sp.sqrt(2 * freqs * (1 - freqs))
         snp_means = freqs * 2
 
-        betas = betas[ok_indices['ss']]
-        log_odds = log_odds[ok_indices['ss']]
+        betas = betas[ok_indices['ss']]  
+        log_odds = log_odds[ok_indices['ss']]  
 
         ps = ssg['ps'][...][ok_indices['ss']]
-        nts = sp.array(ok_nts)
+        nts = sp.array(ok_nts)  
         sids = (ssg['sids'][...]).astype(util.sids_u_dtype)
         sids = sids[ok_indices['ss']]
 
@@ -657,10 +638,10 @@ def coordinate_genotypes_ss_w_ld_ref(genotype_file=None,
         else:
             genetic_map = None
 
-        coord_data_dict = {'chrom': 'chrom_%d' % chrom,
-                           'raw_snps_ref': raw_ref_snps,
-                           'snp_stds_ref': snp_stds_ref,
-                           'snp_means_ref': snp_means_ref,
+        coord_data_dict = {'chrom': 'chrom_%d' % chrom, 
+                           'raw_snps_ref': raw_ref_snps, 
+                           'snp_stds_ref': snp_stds_ref, 
+                           'snp_means_ref': snp_means_ref, 
                            'freqs_ref': freqs_ref,
                            'ps': ps,
                            'positions': positions,
@@ -674,7 +655,7 @@ def coordinate_genotypes_ss_w_ld_ref(genotype_file=None,
                            'snp_stds_val':snp_stds,
                            'snp_means_val':snp_means,
                            'freqs_val':freqs}
-
+          
         write_coord_data(cord_data_g, coord_data_dict)
         maf_adj_risk_scores += maf_adj_prs
         num_common_snps += len(betas)
@@ -695,7 +676,7 @@ def coordinate_genotypes_ss_w_ld_ref(genotype_file=None,
 def main(p_dict):
 
     summary_dict = {}
-
+    
     bimfile = None
     if p_dict['N'] is None:
         print('Please specify an integer value for the sample size used to calculate the GWAS summary statistics.')
@@ -715,19 +696,19 @@ def main(p_dict):
         raise Exception('Output file already exists!')
 
     h5f = h5py.File(p_dict['out'], 'w')
-
+    
     sum_stats_parsers.parse_sum_stats(h5f, p_dict, bimfile)
     check_mafs = p_dict['maf']>0
     if not p_dict['vgf'] == None:
         coordinate_genotypes_ss_w_ld_ref(genotype_file=p_dict['vgf'], reference_genotype_file=p_dict['gf'],
                                          check_mafs=check_mafs,
-                                         hdf5_file=h5f, min_maf=p_dict['maf'], skip_coordination=p_dict['skip_coordination'],
+                                         hdf5_file=h5f, min_maf=p_dict['maf'], skip_coordination=p_dict['skip_coordination'], 
                                          debug=p_dict['debug'])
     else:
         coordinate_genot_ss(genotype_file=p_dict['gf'], check_mafs=check_mafs,
-                            hdf5_file=h5f, min_maf=p_dict['maf'], skip_coordination=p_dict['skip_coordination'],
+                            hdf5_file=h5f, min_maf=p_dict['maf'], skip_coordination=p_dict['skip_coordination'], 
                             debug=p_dict['debug'])
 
-
+    
 
     h5f.close()

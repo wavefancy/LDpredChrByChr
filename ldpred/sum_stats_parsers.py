@@ -223,14 +223,19 @@ def parse_sum_stats_custom(filename=None,
                     chrom_dict[chrom]['log_odds'].append(raw_beta)
                     beta = sp.sign(raw_beta) * stats.norm.ppf(pval_read / 2.0)
                     if n is None:
-                        chrom_dict[chrom]['betas'].append(beta/ sp.sqrt(int(header_dict[ncol])))
+                        #wallae
+                        #chrom_dict[chrom]['betas'].append(beta/ sp.sqrt(int(header_dict[ncol])))
+                        chrom_dict[chrom]['betas'].append(beta/ sp.sqrt(int(l[header_dict[ncol]])))
                     else:
                         chrom_dict[chrom]['betas'].append(beta / sp.sqrt(n))
                 else:
                     beta = sp.sign(raw_beta) * stats.norm.ppf(pval_read / 2.0)
                     if n is None:
-                        chrom_dict[chrom]['log_odds'].append(beta/ sp.sqrt(int(header_dict[ncol])))
-                        chrom_dict[chrom]['betas'].append(beta/ sp.sqrt(int(header_dict[ncol])))
+                        ##wallae
+                        # chrom_dict[chrom]['log_odds'].append(beta/ sp.sqrt(int(header_dict[ncol])))
+                        # chrom_dict[chrom]['betas'].append(beta/ sp.sqrt(int(header_dict[ncol])))
+                        chrom_dict[chrom]['log_odds'].append(beta/ sp.sqrt(int(l[header_dict[ncol]])))
+                        chrom_dict[chrom]['betas'].append(beta/ sp.sqrt(int(l[header_dict[ncol]])))
                     else:
                         chrom_dict[chrom]['log_odds'].append(beta / sp.sqrt(n))
                         chrom_dict[chrom]['betas'].append(beta / sp.sqrt(n))

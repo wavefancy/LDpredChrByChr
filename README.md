@@ -32,6 +32,7 @@ __This repo is base on the Feb272019 version of LDpred, with proper bug fix.__
 - This version run in chr by chr mode, and thanks to [hickle](https://github.com/telegraphic/hickle) which greatly reduced the amount of memory needed.
 - Parallel in chr, saved your waiting time.
 - Fix the bug for loading GWAS summary if there are snps with extreme pvalues (0 or 1).
+- Fix the bug for loading GWAS summary with SNP specific sample size.
 
 
 ### Start run LDpred chr by chr

@@ -38,7 +38,7 @@ __This repo is base on the Feb272019 version of LDpred, with proper bug fix.__
 #### 1) Coordinate the LD reference panel and summary statistics.
 The LD reference panel is in plink bed/fam/bim format, the input summary statistics format please refer LDpred instruction. Please make sure the snp id is consistent between LD reference panel with the summary statistics. __Please split the LD reference panel and summary statistics chr by chr, we will parallel them starting from here.__
 
-```
+```bash
 # parallel is GUN parallel program [https://www.gnu.org/software/parallel/].
 # wecho is a my python script in this repository, which depends on docopt for parse args,
 # just reformat the command line, skip comments and generate a single line.

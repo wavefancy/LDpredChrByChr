@@ -152,5 +152,4 @@ LDpred_p3.0000e-03
 ### Bechmark of this pipeline with LDpred's load as a whole approach.
 Please check the LDpred_p1.0000e+00-chr1.png and images/all.LDpred_p1.0000e+00.png, the results are identical.
 
-<img src="./images/LDpred_p1.0000e+00-chr1.png
-" width="256" height="256" title="">
+<img src="./images/LDpred_p1.0000e+00-chr1.png" width="256" height="256" title="">

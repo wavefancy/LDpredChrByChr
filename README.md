@@ -48,7 +48,7 @@ The LD reference panel is in plink bed/fam/bim format, the input summary statist
 parallel -j 1 -q wecho "
     rm -f data/coord.file.chr{}
     &&
-    /medpop/esp2/wallace/tools/LDpred/1.0_wallace/LDpred.py --debug coord
+    /medpop/esp2/wallace/tools/LDpred/1.0_wallace/LDpred.py coord
         # LD ref. file.
         --gf data/ldref.chr{}
         --ssf data/refined.summary.chr{}.txt

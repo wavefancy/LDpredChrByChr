@@ -2,12 +2,16 @@ import sys
 import time
 import h5py
 import scipy as sp
-from scipy import linalg
+# from scipy import linalg
+from numpy import linalg
 from ldpred import util
 from ldpred import ld
 
+#
+# def ldpred_inf(beta_hats, h2=0.1, n=1000, inf_shrink_matrices=None,
+#                reference_ld_mats=None, genotypes=None, ld_window_size=100, verbose=False):
 def ldpred_inf(beta_hats, h2=0.1, n=1000, inf_shrink_matrices=None,
-               reference_ld_mats=None, genotypes=None, ld_window_size=100, verbose=False):
+               reference_ld_mats=None, genotypes=None, ld_window_size=100, verbose=False, scipyInverse=False):
     """
     Apply the infinitesimal shrink w LD (which requires LD information).
 
@@ -16,6 +20,15 @@ def ldpred_inf(beta_hats, h2=0.1, n=1000, inf_shrink_matrices=None,
     If genotypes are supplied, then it assumes that beta_hats and the genotypes are synchronized.
 
     """
+    # Wallace
+    if scipyInverse:
+        print('########## scipy.linalg\n')
+        from scipy import linalg
+    else:
+        print('########## numpy.linalg\n')
+        from numpy import linalg
+    # End wallace.
+
     n = float(n)
     if verbose:
         print('Doing LD correction')

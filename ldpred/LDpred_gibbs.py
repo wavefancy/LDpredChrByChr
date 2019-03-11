@@ -156,9 +156,13 @@ def ldpred_gibbs(beta_hats, genotypes=None, start_betas=None, h2=None, n=1000, l
 # def ldpred_genomewide(data_file=None, ld_radius=None, ld_dict=None, out_file_prefix=None, ps=None,
 #                n=None, h2=None, num_iter=None, verbose=False, zero_jump_prob=0.05, burn_in=5):
 def ldpred_genomewide(data_file=None, ld_radius=None, ld_dict=None, out_file_prefix=None, ps=None,
-               n=None, h2=None, num_iter=None, verbose=False, zero_jump_prob=0.05, burn_in=5, local_ld_file_prefix=None):
+               n=None, h2=None, num_iter=None, verbose=False, zero_jump_prob=0.05, burn_in=5, local_ld_file_prefix=None, scipyInverse=False):
     """
     Calculate LDpred for a genome
+
+    # Wallace:
+    local_ld_file_prefix:
+    scipyInverse: use scipy to compute the Psudo_matrix_inverse, default numpy.
     """
 
     df = h5py.File(data_file, 'r')
@@ -200,7 +204,7 @@ def ldpred_genomewide(data_file=None, ld_radius=None, ld_dict=None, out_file_pre
             pval_derived_betas = pval_derived_betas[ok_snps_filter]
             h2_chrom = herit_dict[chrom_str]
             start_betas = LDpred_inf.ldpred_inf(pval_derived_betas, genotypes=None, reference_ld_mats=chrom_ref_ld_mats[chrom_str],
-                                                h2=h2_chrom, n=n, ld_window_size=2 * ld_radius, verbose=False)
+                                                h2=h2_chrom, n=n, ld_window_size=2 * ld_radius, verbose=False, scipyInverse=scipyInverse)
             LDpred_inf_chrom_dict[chrom_str] = start_betas
 
 
@@ -344,4 +348,4 @@ def main(p_dict):
     #                   h2=p_dict['h2'], verbose=p_dict['debug'])
     ldpred_genomewide(data_file=p_dict['cf'], out_file_prefix=p_dict['out'], ps=p_dict['f'], ld_radius=p_dict['ldr'],
                       ld_dict=ld_dict, n=p_dict['N'], num_iter=p_dict['n_iter'], burn_in=p_dict['n_burn_in'],
-                      h2=p_dict['h2'], verbose=p_dict['debug'], local_ld_file_prefix=p_dict['ldf'])
+                      h2=p_dict['h2'], verbose=p_dict['debug'], local_ld_file_prefix=p_dict['ldf'], scipyInverse = p_dict['scipy'])

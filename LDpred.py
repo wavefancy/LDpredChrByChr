@@ -143,6 +143,8 @@ parser_gibbs.add_argument('--n-burn-in', type=int, default=5,
 parser_gibbs.add_argument('--h2', type=float, default=None,
                     help='The heritability assumed by LDpred.  By default it estimates the heritability from'
                     ' the GWAS summary statistics using LD score regression (Bulik-Sullivan et al., Nat Genet 2015).')
+parser_gibbs.add_argument('--scipy', default=False, action='store_true',
+                    help='Using scipy to compute the (Moore-Penrose) pseudo-inverse matrix, default numpy.')
 # parser_gibbs.add_argument('--gm-ldr', type=float, default=None,
 #                     help='If this option is set, then a genetic map will be used to calculate LD-radius. '
 #                     'A value around 1 is arguably reasonable.')

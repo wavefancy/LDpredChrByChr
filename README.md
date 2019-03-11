@@ -42,13 +42,13 @@ The LD reference panel is in plink bed/fam/bim format, the input summary statist
 ```bash
 # parallel is GUN parallel program [https://www.gnu.org/software/parallel/].
 # wecho is a my python script in this repository, which depends on docopt for parse args,
-# just reformat the command line, skip comments and generate a single line.
+# just reformat the command line, skip comments and generate a single line command for run in bash.
 # You can use bash for-loop to replace my style here.
 
 parallel -j 1 -q wecho "
     rm -f data/coord.file.chr{}
     &&
-    /medpop/esp2/wallace/tools/LDpred/1.0_wallace/LDpred.py --debug coord
+    /medpop/esp2/wallace/tools/LDpred/1.0_wallace/LDpred.py coord
         # LD ref. file.
         --gf data/ldref.chr{}
         --ssf data/refined.summary.chr{}.txt

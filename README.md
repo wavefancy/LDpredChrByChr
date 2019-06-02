@@ -22,10 +22,10 @@ This is trying to have a minimal twist of the LDpred code to make it can be run 
 
 For the original LDpred, it actually runs LD structure estimation and the effect size reweighing step chr by chr, but for the later reweighing step, it needs the global estimation of genome-wide heritability and inflation factor.__In this pipeline, we split these processes as two steps: 1) Estimate LD structure chr by chr, and also gather the parameters for estimating of genome-wide heritability and inflation factor. 2) Estimate genome-wide heritability and inflation factor(this is very cheap), and put this parameter for reweighing beta values chr by chr.__ By this way, we can parallel the computing chr by chr, which will dramatically reduce the memory load and the waiting time. But before we run step 2, __We have to wait all the computing is done in step 1__, as we need the information from all chrs to have a global estimation of genome-wide heritability and inflation factor
 
-#### Install the LDpred software
+### Install the LDpred software
 Please just download this git repository to the any folder you want. For example, I put it here: ```/medpop/esp2/wallace/tools/LDpred/1.0_wallace/```, it's better you can refer this into your Linux ```$PATH``` parameter. Then you can just use ```LDpred.py``` anywhere you want. I did this.
 
-This version depends on ```plinkio``` and ```hickle```. Please install by ```pip install hickle plinkio docopt```. I also recommend use [conda](https://conda.io/en/latest/).
+This version depends on ```plinkio``` and ```hickle```. Please install by ```pip install hickle plinkio docopt```. I also recommend use [conda](https://conda.io/en/latest/) to manage python packages.
 
 __This repo is base on the Feb272019 version of LDpred, with proper bug fix.__
 

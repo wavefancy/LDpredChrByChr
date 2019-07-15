@@ -361,7 +361,7 @@ def get_chromosome_herits_wallace(cord_data_g, ld_scores_dict, n, max_h2=1, h2=N
     if len(wfname) == 1:
         sys.stderr.write('ERROR: Can not find key world r"chr[0-9x]{1,2}"(case insensite) from file %s\n'(os.path.basename(x)))
         sys.exit(-1)
-    loadname = wdirname + '*'.join(wfname) + '_byFileCache.txt'
+    loadname = wdirname + '/' + '*'.join(wfname) + '_byFileCache.txt'
     print('WALLACE INFO: load chromosome level summary file pattern: ' + loadname)
     wallace_chr_summary = []
     print('WALLACE INFO: *** please make sure all files have been loaded!****')

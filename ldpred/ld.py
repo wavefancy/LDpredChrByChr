@@ -5,6 +5,7 @@ Various useful LD functions.
 """
 import scipy as sp
 import sys, os, gzip, pickle
+import re
 # Wallace change pickle to cPickle.
 # import sys, os, gzip
 # import _pickle as pickle
@@ -352,7 +353,14 @@ def get_chromosome_herits_wallace(cord_data_g, ld_scores_dict, n, max_h2=1, h2=N
     # load and calculate genome wide avg_gw_ld_score and chi_square_lambda
     # input files, load all the files in ld_file folder end by _byFileCache.txt
     # print local_ld_dict_file
-    loadname = os.path.dirname(os.path.realpath(local_ld_dict_file)) + '/*_byFileCache.txt'
+    #loadname = os.path.dirname(os.path.realpath(local_ld_dict_file)) + '/*_byFileCache.txt'
+    # better pattern recognition.
+    wdirname = os.path.dirname(os.path.realpath(local_ld_dict_file))
+    wfname = re.split(r'chr[0-9x]{1,2}',os.path.basename(x),flags=re.IGNORECASE)
+    if len(wfname) == 1:
+        sys.stderr.write('ERROR: Can not find key world r"chr[0-9x]{1,2}"(case insensite) from file %s\n'(os.path.basename(x)))
+        sys.exit(-1)
+    loadname = wdirname + '*'.join(wfname) + '_byFileCache.txt'
     print('WALLACE INFO: load chromosome level summary file pattern: ' + loadname)
     wallace_chr_summary = []
     print('WALLACE INFO: *** please make sure all files have been loaded!****')

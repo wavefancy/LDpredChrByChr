@@ -355,8 +355,9 @@ def get_chromosome_herits_wallace(cord_data_g, ld_scores_dict, n, max_h2=1, h2=N
     # print local_ld_dict_file
     #loadname = os.path.dirname(os.path.realpath(local_ld_dict_file)) + '/*_byFileCache.txt'
     # better pattern recognition.
-    wdirname = os.path.dirname(os.path.realpath(local_ld_dict_file))
-    wfname = re.split(r'chr[0-9x]{1,2}',os.path.basename(x),flags=re.IGNORECASE)
+    myf = os.path.realpath(local_ld_dict_file)
+    wdirname = os.path.dirname(myf)
+    wfname = re.split(r'chr[0-9x]{1,2}',os.path.basename(myf),flags=re.IGNORECASE)
     if len(wfname) == 1:
         sys.stderr.write('ERROR: Can not find key world r"chr[0-9x]{1,2}"(case insensite) from file %s\n'(os.path.basename(x)))
         sys.exit(-1)
